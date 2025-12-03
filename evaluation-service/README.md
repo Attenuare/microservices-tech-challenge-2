@@ -50,7 +50,10 @@ Ele funciona da seguinte forma:
     TARGETING_SERVICE_URL="http://localhost:8003"
     
     # Chave de API que você criou no passo 2
-    SERVICE_API_KEY="SUA_CHAVE_DE_SERVICO"
+     curl -X POST http://localhost:8001/admin/keys \
+    -H "Content-Type: application/json" \
+    -H "Authorization: Bearer admin-secreto-123" \
+    -d '{"name": "evaluation-service-key"}'
     
     # --- Configuração da AWS (Obrigatório para o desafio) ---
     # Cole a URL da fila SQS que você criou no console da AWS
