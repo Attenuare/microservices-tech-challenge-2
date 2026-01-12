@@ -1,0 +1,106 @@
+version: "3.9"
+
+services:
+
+  postgres-auth:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth123
+    ports:
+      - "5432:5432"
+
+  postgres-flag:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: flag
+      POSTGRES_USER: flag
+      POSTGRES_PASSWORD: flag123
+    ports:
+      - "5433:5432"
+
+  postgres-targeting:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: targeting
+      POSTGRES_USER: targeting
+      POSTGRES_PASSWORD: targeting123
+    ports:
+      - "5434:5432"
+
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+
+  dynamodb:
+    image: amazon/dynamodb-local
+    command: "-jar DynamoDBLocal.jar -sharedDb"
+    ports:
+      - "8000:8000"
+
+  sqs:
+    image: softwaremill/elasticmq
+    ports:
+      - "9324:9324"
+      - "9325:9325"
+
+  auth:
+    build: ./auth-service
+    environment:
+      DATABASE_URL: postgres://auth:auth123@postgres-auth:5432/auth?sslmode=disable
+    ports:
+      - "8001:8001"
+    depends_on:
+      - postgres-auth
+
+  flag:
+    build: ./flag-service
+    environment:
+      DATABASE_URL: postgres://flag:flag123@postgres-flag:5432/flag?sslmode=disable
+      AUTH_SERVICE_URL: http://auth:8001
+    ports:
+      - "8002:8002"
+    depends_on:
+      - postgres-flag
+      - auth
+
+  targeting:
+    build: ./targeting-service
+    environment:
+      DATABASE_URL: postgres://targeting:targeting123@postgres-targeting:5432/targeting?sslmode=disable
+      AUTH_SERVICE_URL: http://auth:8001
+    ports:
+      - "8003:8003"
+    depends_on:
+      - postgres-targeting
+      - auth
+
+  evaluation:
+    build: ./evaluation-service
+    environment:
+      REDIS_URL: redis://redis:6379
+      FLAG_SERVICE_URL: http://flag:8002
+      TARGETING_SERVICE_URL: http://targeting:8003
+      AUTH_SERVICE_URL: http://auth:8001
+      SERVICE_API_KEY: dummy-key-local
+      AWS_SQS_URL: http://sqs:9324/queue/togglemaster-events
+      AWS_REGION: us-east-1
+    ports:
+      - "8004:8004"
+    depends_on:
+      - redis
+      - flag
+      - targeting
+
+  analytics:
+    build: ./analytics-service
+    environment:
+      AWS_SQS_URL: http://sqs:9324/queue/togglemaster-events
+      AWS_REGION: us-east-1
+      DYNAMODB_ENDPOINT: http://dynamodb:8000
+      DYNAMODB_TABLE: analytics
+    depends_on:
+      - sqs
+      - dynamodb
