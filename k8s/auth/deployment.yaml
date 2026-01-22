@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: auth
-        image: ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/auth-service:latest
+        image: 637423262039.dkr.ecr.us-east-1.amazonaws.com/tech-challenge/auth-service:latest
         ports:
         - containerPort: 8001
         envFrom:

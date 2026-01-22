@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: auth
       POSTGRES_USER: auth
-      POSTGRES_PASSWORD: auth123
+      POSTGRES_PASSWORD: auth1234
     ports:
       - "5432:5432"
 
@@ -15,17 +15,17 @@ services:
     image: postgres:15
     environment:
       POSTGRES_DB: flag
-      POSTGRES_USER: flag
-      POSTGRES_PASSWORD: flag123
+      POSTGRES_USER: flagservice
+      POSTGRES_PASSWORD: bandeira1234
     ports:
       - "5433:5432"
 
   postgres-targeting:
     image: postgres:15
     environment:
-      POSTGRES_DB: targeting
+      POSTGRES_DB: postegress-targeting
       POSTGRES_USER: targeting
-      POSTGRES_PASSWORD: targeting123
+      POSTGRES_PASSWORD: targeting1234
     ports:
       - "5434:5432"
 
