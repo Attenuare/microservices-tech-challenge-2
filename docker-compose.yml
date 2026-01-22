@@ -1,4 +1,4 @@
-version: "3.9"
+
 
 services:
 
@@ -8,8 +8,13 @@ services:
       POSTGRES_DB: auth
       POSTGRES_USER: auth
       POSTGRES_PASSWORD: auth123
-    ports:
-      - "5432:5432"
+    volumes:
+      - ./auth-service/db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   postgres-flag:
     image: postgres:15
@@ -17,8 +22,13 @@ services:
       POSTGRES_DB: flag
       POSTGRES_USER: flag
       POSTGRES_PASSWORD: flag123
-    ports:
-      - "5433:5432"
+    volumes:
+      - ./flag-service/db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U flag"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   postgres-targeting:
     image: postgres:15
@@ -26,8 +36,13 @@ services:
       POSTGRES_DB: targeting
       POSTGRES_USER: targeting
       POSTGRES_PASSWORD: targeting123
-    ports:
-      - "5434:5432"
+    volumes:
+      - ./targeting-service/db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U targeting"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis
@@ -50,10 +65,12 @@ services:
     build: ./auth-service
     environment:
       DATABASE_URL: postgres://auth:auth123@postgres-auth:5432/auth?sslmode=disable
+      MASTER_KEY: admin-secreto-123
     ports:
       - "8001:8001"
     depends_on:
-      - postgres-auth
+      postgres-auth:
+        condition: service_healthy
 
   flag:
     build: ./flag-service
@@ -63,8 +80,10 @@ services:
     ports:
       - "8002:8002"
     depends_on:
-      - postgres-flag
-      - auth
+      postgres-flag:
+        condition: service_healthy
+      auth:
+        condition: service_started
 
   targeting:
     build: ./targeting-service
@@ -74,8 +93,10 @@ services:
     ports:
       - "8003:8003"
     depends_on:
-      - postgres-targeting
-      - auth
+      postgres-targeting:
+        condition: service_healthy
+      auth:
+        condition: service_started
 
   evaluation:
     build: ./evaluation-service
@@ -84,9 +105,13 @@ services:
       FLAG_SERVICE_URL: http://flag:8002
       TARGETING_SERVICE_URL: http://targeting:8003
       AUTH_SERVICE_URL: http://auth:8001
-      SERVICE_API_KEY: dummy-key-local
-      AWS_SQS_URL: http://sqs:9324/queue/togglemaster-events
+      SERVICE_API_KEY: tm_key_080432905a087008eb69902e12ffa6f44f239321a8939303090082f3c2969a8e
+      AWS_SQS_URL: http://localhost:9324/000000000000/togglemaster-events
+
       AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
+      AWS_SQS_ENDPOINT: http://sqs:9324
     ports:
       - "8004:8004"
     depends_on:
@@ -97,8 +122,13 @@ services:
   analytics:
     build: ./analytics-service
     environment:
-      AWS_SQS_URL: http://sqs:9324/queue/togglemaster-events
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
+
       AWS_REGION: us-east-1
+      AWS_SQS_URL: http://sqs:9324/queue/togglemaster-events
+      AWS_SQS_ENDPOINT: http://sqs:9324
+
       DYNAMODB_ENDPOINT: http://dynamodb:8000
       DYNAMODB_TABLE: analytics
     depends_on:
