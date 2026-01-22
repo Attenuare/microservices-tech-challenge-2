@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/go-redis/redis/v8"
@@ -77,12 +78,24 @@ func main() {
 	// Cliente SQS (AWS SDK)
 	var sqsSvc *sqs.SQS
 	if sqsQueueURL != "" {
-		sess, err := session.NewSession(&aws.Config{Region: aws.String(awsRegion)})
-		if err != nil {
-			log.Fatalf("Não foi possível criar sessão AWS: %v", err)
-		}
-		sqsSvc = sqs.New(sess)
-		log.Println("Cliente SQS inicializado com sucesso.")
+			awsEndpoint := os.Getenv("AWS_SQS_ENDPOINT")
+
+			sess, err := session.NewSession(&aws.Config{
+				Region:      aws.String(awsRegion),
+				Endpoint:    aws.String(awsEndpoint),
+				Credentials: credentials.NewStaticCredentials(
+					os.Getenv("AWS_ACCESS_KEY_ID"),
+					os.Getenv("AWS_SECRET_ACCESS_KEY"),
+					"",
+				),
+				DisableSSL: aws.Bool(true),
+			})
+			if err != nil {
+				log.Fatalf("Não foi possível criar sessão AWS: %v", err)
+			}
+
+			sqsSvc = sqs.New(sess)
+			log.Println("Cliente SQS (ElasticMQ) inicializado com sucesso.")
 	}
 
 	// Cliente HTTP (com timeout)
